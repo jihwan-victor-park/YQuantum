@@ -2,6 +2,8 @@
 
 ## Optimization of Premium Investment Portfolios
 
+<img width="641" height="187" alt="image" src="https://github.com/user-attachments/assets/3a52ee10-0916-4432-b262-28af638976b7" />
+
 Use case by The Hartford and Capgemini’s Quantum Lab supported by QuEra 
 
 ## Description of broad problem
@@ -39,7 +41,7 @@ The goal is to find the values of w_i that minimize the total portfolio risk, ta
 
 ### Quantum approaches
 
-The formulation above is not ready for a quantum computer yet, because it has constraints. We can add the term λ(∑_i▒w_i -B)^2 to make sure the objective function is minimal when the constraint ∑_i▒w_i =B is met. λ is a penalty term that you have to tweak in order to make the solutions feasible, but also non-trivial.
+The formulation above is not ready for a quantum computer yet, because it has constraints. We can add the term λ(∑_i*w_i -B)^2 to make sure the objective function is minimal when the constraint ∑_i*w_i =B is met. λ is a penalty term that you have to tweak in order to make the solutions feasible, but also non-trivial.
 The final formulation is
 
 <img width="612" height="113" alt="image" src="https://github.com/user-attachments/assets/89dec75a-2aa0-4cb8-820f-4f35d27c94b7" />
@@ -91,10 +93,16 @@ https://github.com/Qiskit/textbook/blob/main/notebooks/ch-applications/qaoa.ipyn
 ### References
 
 [1]	E. Farhi, J. Goldstone, and S. Gutmann, “A quantum approximate optimization algorithm,” arXiv preprint arXiv:1411.4028, 2014.
+
 [2]	N. Sachdeva et al., “Quantum optimization using a 127-qubit gate-model IBM quantum computer can outperform quantum annealers for nontrivial binary optimization problems,” Jul. 22, 2024, arXiv: arXiv:2406.01743. Accessed: Sep. 13, 2024. [Online]. Available: http://arxiv.org/abs/2406.01743
+
 [3]	M. Cerezo et al., “Variational quantum algorithms,” Nature Reviews Physics, vol. 3, no. 9, pp. 625–644, 2021.
+
 [4]	D. Wang, O. Higgott, and S. Brierley, “Accelerated Variational Quantum Eigensolver,” Physical review letters, vol. 122, no. 14, p. 140504, 2019.
+
 [6]	S. Stastny, H. P. Büchler, and N. Lang, “Functional completeness of planar Rydberg blockade structures,” Physical Review B, vol. 108, no. 8, p. 085138, 2023.
+
 [7]	M. W. Johnson et al., “Quantum annealing with manufactured spins,” Nature, vol. 473, no. 7346, pp. 194–198, 2011.
+
 [8]	C. C. McGeoch, K. Chern, P. Farré, and A. K. King, “A comment on comparing optimization on D-Wave and IBM quantum processors,” Jun. 27, 2024, arXiv: arXiv:2406.19351. Accessed: Oct. 17, 2024. [Online]. Available: http://arxiv.org/abs/2406.19351
 
