@@ -1,0 +1,10 @@
+
+Return-Weighted Run — 1000-shot Bloqade analog (local detuning ∝ E[R])
+Local detuning peak = 8.0 rad/µs, scales normalised to max(μ).
+
+Top 5 bitstrings:
+  1. 01101101  count=185  freq=0.1850  selects: ['A018', 'A008', 'A038', 'A004', 'A034']
+  2. 00101110  count=173  freq=0.1730  selects: ['A008', 'A038', 'A004', 'A048']
+  3. 01011101  count=81  freq=0.0810  selects: ['A018', 'A022', 'A038', 'A004', 'A034']
+  4. 01101110  count=52  freq=0.0520  selects: ['A018', 'A008', 'A038', 'A004', 'A048']
+  5. 00111110  count=39  freq=0.0390  selects: ['A008', 'A022', 'A038', 'A004', 'A048']

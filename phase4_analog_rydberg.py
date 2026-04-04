@@ -23,6 +23,20 @@ Step 4.3 applies a simple adiabatic-style waveform: Ω ramps up, holds, ramps do
 
 Deliverable: top-5 bitstrings from 1000-shot local emulation (bloqade.python()).
 
+Return-maximization via per-atom local detuning
+------------------------------------------------
+After the uniform-detuning base run, a **return-weighted** program adds a spatially
+modulated detuning field where each atom i receives
+
+    Δ_local_i(t) = -local_strength × (μ_i / max(μ)) × waveform(t)
+
+Higher expected return μ_i → deeper negative local detuning → lower energy when
+qubit i is in |r⟩ (Rydberg / selected).  The quantum adiabatic evolution therefore
+*preferentially excites* high-return atoms while the Rydberg blockade still forbids
+co-selection of highly correlated neighbours.
+
+Tune ``LOCAL_DETUNING_STRENGTH`` env var (default 8.0 rad/µs).
+
 Geometry scale sweep (risk–return curve)
 ----------------------------------------
 After the base layout, optionally scale all (x, y) coordinates by factors in
@@ -242,6 +256,94 @@ def plot_scale_sweep_top_frequency(sweep_rows: list[dict], path: Path) -> None:
     plt.close(fig)
 
 
+def plot_local_detuning_weights(ids: list[str], mu: np.ndarray, scales: list[float],
+                                local_strength: float, path: Path) -> None:
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+    x = np.arange(len(ids))
+
+    axes[0].barh(x, mu, color="teal", edgecolor="k", alpha=0.85)
+    axes[0].set_yticks(x)
+    axes[0].set_yticklabels(ids)
+    axes[0].set_xlabel("Expected return μ")
+    axes[0].set_title("Per-asset expected return (Phase 1)")
+    axes[0].invert_yaxis()
+    axes[0].grid(True, axis="x", alpha=0.3)
+
+    peak_detunings = [s * local_strength for s in scales]
+    axes[1].barh(x, peak_detunings, color="coral", edgecolor="k", alpha=0.85)
+    axes[1].set_yticks(x)
+    axes[1].set_yticklabels(ids)
+    axes[1].set_xlabel("Peak local detuning (rad/µs)")
+    axes[1].set_title("Local Δ_i = scale_i × " + f"{local_strength:.1f}")
+    axes[1].invert_yaxis()
+    axes[1].grid(True, axis="x", alpha=0.3)
+
+    fig.suptitle("Return-Maximization: per-atom detuning mapping", fontsize=12, y=1.02)
+    fig.tight_layout()
+    fig.savefig(path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_uniform_vs_weighted_comparison(
+    ids: list[str],
+    unif_counts: dict,
+    rw_counts: dict,
+    shots: int,
+    path: Path,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    all_bs = sorted(set(list(unif_counts.keys()) + list(rw_counts.keys())),
+                    key=lambda b: max(unif_counts.get(b, 0), rw_counts.get(b, 0)),
+                    reverse=True)[:12]
+    unif_freq = [unif_counts.get(b, 0) / shots for b in all_bs]
+    rw_freq = [rw_counts.get(b, 0) / shots for b in all_bs]
+
+    x = np.arange(len(all_bs))
+    w = 0.35
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.bar(x - w / 2, unif_freq, w, label="Uniform Δ", color="steelblue", edgecolor="k", alpha=0.85)
+    ax.bar(x + w / 2, rw_freq, w, label="Return-Weighted Δ", color="coral", edgecolor="k", alpha=0.85)
+    ax.set_xticks(x)
+    ax.set_xticklabels(all_bs, rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("Probability")
+    ax.set_xlabel("Bitstring")
+    ax.set_title("Uniform vs Return-Weighted Detuning (top 12 bitstrings)")
+    ax.legend()
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_risk_return_comparison(
+    unif_ret: float, unif_vol: float,
+    rw_ret: float, rw_vol: float,
+    path: Path,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.scatter([unif_vol], [unif_ret], s=180, c="steelblue", edgecolors="k",
+               zorder=5, label="Uniform Δ")
+    ax.scatter([rw_vol], [rw_ret], s=180, c="coral", edgecolors="k",
+               zorder=5, label="Return-Weighted Δ", marker="D")
+    ax.annotate("Uniform", (unif_vol, unif_ret), textcoords="offset points",
+                xytext=(8, 8), fontsize=9)
+    ax.annotate("Return-Wtd", (rw_vol, rw_ret), textcoords="offset points",
+                xytext=(8, -12), fontsize=9)
+    ax.set_xlabel("Portfolio volatility σ")
+    ax.set_ylabel("Portfolio expected return E[R]")
+    ax.set_title("Risk–Return: Uniform vs Return-Weighted (top bitstring)")
+    ax.legend(loc="lower right")
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+
+
 def build_analog_program(
     positions: list[tuple[float, float]],
     *,
@@ -263,6 +365,69 @@ def build_analog_program(
             values=[delta_neg, delta_neg, delta_pos, delta_pos],
         )
     )
+
+
+def compute_local_detuning_scales(
+    mu: np.ndarray,
+    *,
+    local_strength: float,
+) -> list[float]:
+    """
+    Map expected returns μ_i to per-atom detuning *scale factors*.
+
+    Normalisation: scales_i = μ_i / max(μ) so the highest-return asset gets
+    scale = 1.0 and all others are proportionally smaller.  The caller
+    multiplies the whole local-detuning waveform by ``local_strength`` so
+    actual peak local detuning = local_strength × scale_i.
+    """
+    mu_abs = np.abs(mu)
+    mx = float(mu_abs.max())
+    if mx < 1e-15:
+        return [1.0] * len(mu)
+    return (mu_abs / mx).tolist()
+
+
+def build_return_weighted_program(
+    positions: list[tuple[float, float]],
+    mu: np.ndarray,
+    *,
+    start_mod,
+    dur_ramp: float,
+    dur_sweep: float,
+    omega_peak: float,
+    delta_neg: float,
+    delta_pos: float,
+    local_strength: float,
+):
+    """
+    Adiabatic program with **per-atom local detuning** biasing toward
+    high-return assets.
+
+    Hamiltonian = global Ω drive + global Δ sweep + local Δ_i(t)
+    where Δ_i(t) ∝ μ_i.  Higher μ → deeper negative local detuning →
+    lower energy when qubit i is in |r⟩ (Rydberg / selected) →
+    the quantum system prefers to excite (select) high-return atoms.
+    """
+    durations = [dur_ramp, dur_sweep, dur_ramp]
+    n = len(positions)
+    scales = compute_local_detuning_scales(mu, local_strength=local_strength)
+
+    geometry = start_mod.add_position(positions)
+    prog = (
+        geometry.rydberg.rabi.amplitude.uniform.piecewise_linear(
+            durations=durations,
+            values=[0.0, omega_peak, omega_peak, 0.0],
+        )
+        .detuning.uniform.piecewise_linear(
+            durations=durations,
+            values=[delta_neg, delta_neg, delta_pos, delta_pos],
+        )
+        .detuning.location(list(range(n)), scales).piecewise_linear(
+            durations=durations,
+            values=[0.0, -local_strength, -local_strength, 0.0],
+        )
+    )
+    return prog
 
 
 def run_scale_sweep(
@@ -416,9 +581,136 @@ def main() -> None:
             "notes": "Ω ramps up / holds / ramps down; Δ sweeps negative → positive in middle segment.",
         },
         "shots": shots,
-        "top5": [{"bitstring": b, "count": int(c), "frequency": c / shots} for b, c in top5],
-        "all_counts": {k: int(v) for k, v in ranked},
+        "top5_uniform": [{"bitstring": b, "count": int(c), "frequency": c / shots} for b, c in top5],
+        "all_counts_uniform": {k: int(v) for k, v in ranked},
         "blockade_narrative_um": BLOCKADE_NEAR,
+    }
+
+    # --- Return-Maximization via per-atom local detuning ---
+    mu8, sigma8 = load_mu_sigma_8(ids)
+    local_strength = float(os.environ.get("LOCAL_DETUNING_STRENGTH", "8.0"))  # rad/µs
+    local_scales = compute_local_detuning_scales(mu8, local_strength=local_strength)
+
+    print(f"\n--- Return-Weighted Run (local detuning strength = {local_strength} rad/µs) ---")
+    print("Per-atom detuning scales (∝ μ_i / max(μ)):")
+    for i, (aid, sc) in enumerate(zip(ids, local_scales)):
+        print(f"  qubit {i} ({aid}): scale = {sc:.4f}, μ = {mu8[i]:.6f}")
+
+    rw_program = build_return_weighted_program(
+        positions, mu8,
+        start_mod=start,
+        local_strength=local_strength,
+        **pulse_kw,
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        rw_results = rw_program.bloqade.python().run(shots, interaction_picture=True)
+
+    rw_counts = rw_results.report().counts()[0]
+    rw_ranked = sorted(rw_counts.items(), key=lambda kv: kv[1], reverse=True)
+    rw_top5 = rw_ranked[:5]
+
+    rw_lines = [
+        f"\nReturn-Weighted Run — {shots}-shot Bloqade analog (local detuning ∝ E[R])",
+        f"Local detuning peak = {local_strength} rad/µs, scales normalised to max(μ).",
+        "",
+        "Top 5 bitstrings:",
+    ]
+    for k, (bs, c) in enumerate(rw_top5, 1):
+        sel = [ids[j] for j, ch in enumerate(bs) if ch == "1"]
+        rw_lines.append(f"  {k}. {bs}  count={c}  freq={c/shots:.4f}  selects: {sel}")
+    rw_text = "\n".join(rw_lines) + "\n"
+    print(rw_text)
+    (OUT_DIR / "return_weighted_top5.txt").write_text(rw_text, encoding="utf-8")
+
+    selected_char = os.environ.get("BITSTRING_ONE_MEANS_SELECTED", "1").strip() or "1"
+    rw_top_bs = rw_top5[0][0]
+    rw_ret, rw_vol = portfolio_mu_sigma_equal_weight(rw_top_bs, mu8, sigma8, selected_char=selected_char)
+    unif_top_bs = top5[0][0]
+    unif_ret, unif_vol = portfolio_mu_sigma_equal_weight(unif_top_bs, mu8, sigma8, selected_char=selected_char)
+
+    summary["return_weighted"] = {
+        "local_detuning_strength_rad_us": local_strength,
+        "per_atom_scales": {aid: round(s, 5) for aid, s in zip(ids, local_scales)},
+        "narrative": (
+            "Per-atom detuning Δ_i(t) ∝ E[R_i] / max(E[R]) biases the Hamiltonian toward "
+            "higher-return assets.  The Rydberg blockade still prevents co-selection of "
+            "highly correlated neighbours — a physics-encoded risk-return trade-off."
+        ),
+        "shots": shots,
+        "top5": [{"bitstring": b, "count": int(c), "frequency": c / shots} for b, c in rw_top5],
+        "all_counts": {k: int(v) for k, v in rw_ranked},
+        "top_portfolio": {
+            "bitstring": rw_top_bs,
+            "exp_return": rw_ret,
+            "volatility": rw_vol,
+        },
+    }
+
+    # --- Sharpe-weighted local detuning (risk-adjusted) ---
+    vol8 = np.array([float(pd.read_csv(ASSETS_PATH).set_index("asset_id").loc[a, "volatility"]) for a in ids])
+    sharpe8 = mu8 / np.maximum(vol8, 1e-12)
+    sharpe_scales = compute_local_detuning_scales(sharpe8, local_strength=local_strength)
+
+    print(f"\n--- Sharpe-Weighted Run (local detuning ∝ Sharpe = μ/σ) ---")
+    print("Per-atom detuning scales (∝ Sharpe_i / max(Sharpe)):")
+    for i, (aid, sc) in enumerate(zip(ids, sharpe_scales)):
+        print(f"  qubit {i} ({aid}): scale = {sc:.4f}, Sharpe = {sharpe8[i]:.6f}")
+
+    sw_program = build_return_weighted_program(
+        positions, sharpe8,
+        start_mod=start,
+        local_strength=local_strength,
+        **pulse_kw,
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        sw_results = sw_program.bloqade.python().run(shots, interaction_picture=True)
+
+    sw_counts = sw_results.report().counts()[0]
+    sw_ranked = sorted(sw_counts.items(), key=lambda kv: kv[1], reverse=True)
+    sw_top5 = sw_ranked[:5]
+
+    sw_lines = [
+        f"\nSharpe-Weighted Run — {shots}-shot Bloqade analog (local detuning ∝ μ/σ)",
+        f"Local detuning peak = {local_strength} rad/µs, scales normalised to max(Sharpe).",
+        "",
+        "Top 5 bitstrings:",
+    ]
+    for k, (bs, c) in enumerate(sw_top5, 1):
+        sel = [ids[j] for j, ch in enumerate(bs) if ch == "1"]
+        sw_lines.append(f"  {k}. {bs}  count={c}  freq={c/shots:.4f}  selects: {sel}")
+    sw_text = "\n".join(sw_lines) + "\n"
+    print(sw_text)
+    (OUT_DIR / "sharpe_weighted_top5.txt").write_text(sw_text, encoding="utf-8")
+
+    sw_top_bs = sw_top5[0][0]
+    sw_ret, sw_vol = portfolio_mu_sigma_equal_weight(sw_top_bs, mu8, sigma8, selected_char=selected_char)
+
+    summary["sharpe_weighted"] = {
+        "local_detuning_strength_rad_us": local_strength,
+        "per_atom_scales": {aid: round(s, 5) for aid, s in zip(ids, sharpe_scales)},
+        "narrative": (
+            "Per-atom detuning Δ_i(t) ∝ Sharpe_i / max(Sharpe) — risk-adjusted selection. "
+            "Assets with high risk-adjusted return get deeper local detuning, preferring "
+            "e.g. Cash (high Sharpe) over raw high-return equities."
+        ),
+        "shots": shots,
+        "top5": [{"bitstring": b, "count": int(c), "frequency": c / shots} for b, c in sw_top5],
+        "all_counts": {k: int(v) for k, v in sw_ranked},
+        "top_portfolio": {
+            "bitstring": sw_top_bs,
+            "exp_return": sw_ret,
+            "volatility": sw_vol,
+        },
+    }
+
+    summary["comparison_uniform_vs_return_weighted"] = {
+        "uniform_top": {"bitstring": unif_top_bs, "exp_return": unif_ret, "volatility": unif_vol},
+        "return_weighted_top": {"bitstring": rw_top_bs, "exp_return": rw_ret, "volatility": rw_vol},
+        "sharpe_weighted_top": {"bitstring": sw_top_bs, "exp_return": sw_ret, "volatility": sw_vol},
+        "return_delta": rw_ret - unif_ret,
+        "volatility_delta": rw_vol - unif_vol,
     }
     # --- Scale sweep: geometry multipliers → top bitstring → classical μ, σ ---
     do_sweep = os.environ.get("SCALE_SWEEP", "1").strip().lower() not in ("0", "false", "no", "off")
@@ -427,8 +719,6 @@ def main() -> None:
         sf_raw = os.environ.get("SCALE_FACTORS", "0.8,1.0,1.2,1.5").strip()
         scale_factors = [float(x.strip()) for x in sf_raw.split(",") if x.strip()]
         sweep_shots = int(os.environ.get("SCALE_SWEEP_SHOTS", "1000"))
-        selected_char = os.environ.get("BITSTRING_ONE_MEANS_SELECTED", "1").strip() or "1"
-        mu8, sigma8 = load_mu_sigma_8(ids)
         sweep_rows = run_scale_sweep(
             xy,
             ids,
@@ -502,9 +792,9 @@ def main() -> None:
         if sweep_rows:
             vols = [r["portfolio_volatility"] for r in sweep_rows]
             rets = [r["portfolio_exp_return"] for r in sweep_rows]
-            scales = [r["scale_factor"] for r in sweep_rows]
+            sweep_scales = [r["scale_factor"] for r in sweep_rows]
             fig2, ax2 = plt.subplots(figsize=(6.5, 5))
-            sc = ax2.scatter(vols, rets, c=scales, cmap="viridis", s=120, edgecolors="k", zorder=3)
+            sc = ax2.scatter(vols, rets, c=sweep_scales, cmap="viridis", s=120, edgecolors="k", zorder=3)
             for r in sweep_rows:
                 ax2.annotate(
                     f"{r['scale_factor']}×",
@@ -522,6 +812,19 @@ def main() -> None:
             fig2.savefig(OUT_DIR / "scale_sweep_risk_return.png", dpi=170, bbox_inches="tight")
             plt.close(fig2)
             plot_scale_sweep_top_frequency(sweep_rows, OUT_DIR / "scale_sweep_modal_frequency.png")
+
+        plot_local_detuning_weights(
+            ids, mu8, local_scales, local_strength,
+            OUT_DIR / "local_detuning_weights.png",
+        )
+        plot_uniform_vs_weighted_comparison(
+            ids, counts, rw_counts, shots,
+            OUT_DIR / "uniform_vs_return_weighted_bitstrings.png",
+        )
+        plot_risk_return_comparison(
+            unif_ret, unif_vol, rw_ret, rw_vol,
+            OUT_DIR / "risk_return_uniform_vs_weighted.png",
+        )
     except Exception as e:
         print("Phase 4: figure export skipped:", e, file=sys.stderr)
 

@@ -1,9 +1,9 @@
-Phase 4 — 400-shot Bloqade analog emulation (local)
+Phase 4 — 1000-shot Bloqade analog emulation (local)
 Bitstring order: qubit 0 = first asset in eight_qubit_assets.csv (cluster order), MSB-left convention as in report.counts().
 
 Top 5 bitstrings:
-  1. 11010001  count=38  freq=0.0950
-  2. 00101110  count=36  freq=0.0900
-  3. 11101001  count=29  freq=0.0725
-  4. 01011101  count=27  freq=0.0675
-  5. 10110011  count=27  freq=0.0675
+  1. 00101110  count=108  freq=0.1080
+  2. 10110011  count=87  freq=0.0870
+  3. 11010001  count=77  freq=0.0770
+  4. 11101001  count=74  freq=0.0740
+  5. 01011101  count=59  freq=0.0590

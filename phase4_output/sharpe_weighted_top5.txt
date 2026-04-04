@@ -1,0 +1,10 @@
+
+Sharpe-Weighted Run — 1000-shot Bloqade analog (local detuning ∝ μ/σ)
+Local detuning peak = 8.0 rad/µs, scales normalised to max(Sharpe).
+
+Top 5 bitstrings:
+  1. 00101110  count=162  freq=0.1620  selects: ['A008', 'A038', 'A004', 'A048']
+  2. 10101011  count=119  freq=0.1190  selects: ['A027', 'A008', 'A038', 'A048', 'A034']
+  3. 01011110  count=89  freq=0.0890  selects: ['A018', 'A022', 'A038', 'A004', 'A048']
+  4. 10110011  count=85  freq=0.0850  selects: ['A027', 'A008', 'A022', 'A048', 'A034']
+  5. 11010001  count=65  freq=0.0650  selects: ['A027', 'A018', 'A022', 'A034']

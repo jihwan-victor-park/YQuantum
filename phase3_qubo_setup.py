@@ -62,6 +62,193 @@ def qubo_energy_symmetric(x: np.ndarray, Q: np.ndarray) -> float:
     return float(x @ Q @ x)
 
 
+def symmetric_Q_to_ising(Q: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
+    """
+    Map symmetric QUBO energy to an Ising model on spins s_i ∈ {-1, +1}.
+
+    Substitution: x_i = (1 + s_i) / 2.
+
+    E_QUBO(x) = x^T Q x = C_0 + sum_i h_i s_i + sum_{i<j} J_ij s_i s_j
+
+    with (standard textbook identity for symmetric Q):
+      h_i = (1/2) * sum_j Q_ij
+      J_ij = Q_ij / 2   for i < j (symmetric extension J_ji = J_ij)
+      C_0 = (1/2) * sum_i Q_ii + (1/2) * sum_{i<j} Q_ij
+    """
+    n = Q.shape[0]
+    Qs = 0.5 * (Q + Q.T)
+    h = 0.5 * Qs.sum(axis=1)
+    J = np.zeros((n, n), dtype=np.float64)
+    for i in range(n):
+        for j in range(i + 1, n):
+            J[i, j] = J[j, i] = 0.5 * Qs[i, j]
+    c0 = 0.5 * np.trace(Qs) + 0.5 * sum(float(Qs[i, j]) for i in range(n) for j in range(i + 1, n))
+    return h, J, float(c0)
+
+
+def ising_energy(s: np.ndarray, h: np.ndarray, J: np.ndarray, c0: float) -> float:
+    """H(s) = C_0 + h^T s + sum_{i<j} J_ij s_i s_j (J symmetric, zero diagonal)."""
+    n = len(s)
+    e = c0 + float(h @ s)
+    for i in range(n):
+        for j in range(i + 1, n):
+            e += float(J[i, j] * s[i] * s[j])
+    return e
+
+
+def _matrix_to_markdown_table(M: np.ndarray, row_labels: list[str], col_labels: list[str]) -> str:
+    fmt = lambda v: f"{v:.6g}"
+    header = "| | " + " | ".join(col_labels) + " |"
+    sep = "|" + "|".join(["---"] * (len(col_labels) + 1)) + "|"
+    lines = [header, sep]
+    for i, ri in enumerate(row_labels):
+        row = "| " + ri + " | " + " | ".join(fmt(M[i, j]) for j in range(M.shape[1])) + " |"
+        lines.append(row)
+    return "\n".join(lines)
+
+
+def write_qubo_ising_representation_report(
+    path: Path,
+    ids: list[str],
+    Q_hackathon: np.ndarray,
+    Q_min_total: np.ndarray,
+    *,
+    lambda_risk: float,
+    lambda_budget: float,
+    budget_B: float,
+) -> None:
+    """
+    Single deliverable file answering: 'Constructs a QUBO or Ising representation.'
+    """
+    h1, J1, c1 = symmetric_Q_to_ising(Q_hackathon)
+    h2, J2, c2 = symmetric_Q_to_ising(Q_min_total)
+
+    rng = np.random.default_rng(1)
+    for Qm, h_m, J_m, c_m in (
+        (Q_hackathon, h1, J1, c1),
+        (Q_min_total, h2, J2, c2),
+    ):
+        for _ in range(20):
+            x = (rng.random(len(ids)) > 0.5).astype(np.float64)
+            s = 2.0 * x - 1.0
+            e_q = qubo_energy_symmetric(x, Qm)
+            e_i = ising_energy(s, h_m, J_m, c_m)
+            if abs(e_q - e_i) > 1e-9:
+                raise RuntimeError(f"QUBO/Ising mismatch: {e_q} vs {e_i}")
+
+    lines: list[str] = []
+    lines.append("# QUBO and Ising representation (8-asset portfolio)")
+    lines.append("")
+    lines.append(
+        "This document satisfies the requirement **“Constructs a QUBO or Ising representation”**: "
+        "we give explicit **QUBO** matrices \\(Q\\) and the equivalent **Ising** Hamiltonian "
+        "parameters \\((h, J, C_0)\\) obtained by the change of variables \\(x_i = (1+s_i)/2\\), "
+        "\\(s_i \\in \\{-1,+1\\}\\)."
+    )
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## 1. QUBO form")
+    lines.append("")
+    lines.append("Binary decision variables \\(x_i \\in \\{0,1\\}\\) (e.g. include asset \\(i\\) or not).")
+    lines.append("")
+    lines.append("For **symmetric** \\(Q\\), the QUBO energy is")
+    lines.append("")
+    lines.append("$$E_{\\mathrm{QUBO}}(\\mathbf{x}) = \\mathbf{x}^{\\top} Q \\mathbf{x}")
+    lines.append("= \\sum_i Q_{ii} x_i + 2 \\sum_{i<j} Q_{ij} x_i x_j.$$")
+    lines.append("")
+    lines.append("CSV files with full numeric matrices live in this same folder (`phase3_output/`).")
+    lines.append("")
+    lines.append("### 1a. Hackathon-style \\(Q\\) (returns on diagonal, covariances off-diagonal)")
+    lines.append("")
+    lines.append("- **Construction:** \\(Q_{ii} = \\mu_i\\), \\(Q_{ij} = \\Sigma_{ij}\\) for \\(i \\neq j\\).")
+    lines.append("- **File:** `Q_returns_diag_cov_off.csv`")
+    lines.append("")
+    lines.append(_matrix_to_markdown_table(Q_hackathon, ids, ids))
+    lines.append("")
+    lines.append("### 1b. Minimization QUBO (return − risk + budget penalty)")
+    lines.append("")
+    lines.append(
+        f"- **Risk–return piece:** minimize \\(-\\boldsymbol{{\\mu}}^{{\\top}}\\mathbf{{x}} + "
+        f"\\lambda_{{\\mathrm{{risk}}}} \\mathbf{{x}}^{{\\top}}\\Sigma \\mathbf{{x}}\\) "
+        f"with \\(\\lambda_{{\\mathrm{{risk}}}} = {lambda_risk}\\)."
+    )
+    lines.append(
+        f"- **Budget penalty:** add \\(\\lambda_{{\\mathrm{{budget}}}} (\\sum_i x_i - B)^2\\) "
+        f"with \\(\\lambda_{{\\mathrm{{budget}}}} = {lambda_budget}\\), \\(B = {budget_B}\\)."
+    )
+    lines.append("- **Combined file:** `Q_min_with_budget_penalty.csv`")
+    lines.append("")
+    lines.append(_matrix_to_markdown_table(Q_min_total, ids, ids))
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## 2. Ising form (equivalent energy for every spin configuration)")
+    lines.append("")
+    lines.append("Spins \\(s_i \\in \\{-1,+1\\}\\), with \\(x_i = (1+s_i)/2\\).")
+    lines.append("")
+    lines.append("Any symmetric QUBO maps to")
+    lines.append("")
+    lines.append("$$E_{\\mathrm{Ising}}(\\mathbf{s}) = C_0 + \\sum_i h_i s_i + \\sum_{i<j} J_{ij} s_i s_j$$")
+    lines.append("")
+    lines.append("with")
+    lines.append("")
+    lines.append("$$h_i = \\frac{1}{2} \\sum_j Q_{ij}, \\qquad J_{ij} = \\frac{Q_{ij}}{2}\\ (i<j),$$")
+    lines.append("")
+    lines.append("$$C_0 = \\frac{1}{2}\\sum_i Q_{ii} + \\frac{1}{2}\\sum_{i<j} Q_{ij}.$$")
+    lines.append("")
+    lines.append("*(Same energy as \\(E_{\\mathrm{QUBO}}\\) after substituting \\(x_i=(1+s_i)/2\\); verified in code.)*")
+    lines.append("")
+    lines.append("### 2a. Ising parameters for hackathon-style \\(Q\\)")
+    lines.append("")
+    lines.append(f"- **\\(C_0\\)** = `{c1:.10g}`")
+    lines.append("")
+    lines.append("**Linear fields \\(h_i\\)** (same order as assets):")
+    lines.append("")
+    lines.append("| asset | h_i |")
+    lines.append("| --- | --- |")
+    for a, hi in zip(ids, h1):
+        lines.append(f"| {a} | {hi:.10g} |")
+    lines.append("")
+    lines.append("**Couplings \\(J_{ij}\\)** (symmetric; only \\(i<j\\) listed):")
+    lines.append("")
+    lines.append("| i | j | J_ij |")
+    lines.append("| --- | --- | --- |")
+    n = len(ids)
+    for i in range(n):
+        for j in range(i + 1, n):
+            lines.append(f"| {ids[i]} | {ids[j]} | {J1[i, j]:.10g} |")
+    lines.append("")
+    lines.append("### 2b. Ising parameters for minimization QUBO + budget penalty")
+    lines.append("")
+    lines.append(f"- **\\(C_0\\)** = `{c2:.10g}`")
+    lines.append("")
+    lines.append("| asset | h_i |")
+    lines.append("| --- | --- |")
+    for a, hi in zip(ids, h2):
+        lines.append(f"| {a} | {hi:.10g} |")
+    lines.append("")
+    lines.append("| i | j | J_ij |")
+    lines.append("| --- | --- | --- |")
+    for i in range(n):
+        for j in range(i + 1, n):
+            lines.append(f"| {ids[i]} | {ids[j]} | {J2[i, j]:.10g} |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## 3. How this connects to Phase 4 (Bloqade)")
+    lines.append("")
+    lines.append(
+        "Phase 4 does **not** paste \\(Q\\) into a digital annealer API; it uses a **continuous-time "
+        "Rydberg Hamiltonian** (atom positions, global/local detuning, Rabi amplitude). "
+        "The QUBO/Ising here is the **discrete portfolio combinatorics encoding**; the analog layer is a **different** "
+        "physical realization aimed at similar selection structure (blockade vs correlation, detuning vs returns)."
+    )
+    lines.append("")
+
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
 def minimization_Q_return_risk(
     mu: np.ndarray,
     sigma: np.ndarray,
@@ -223,6 +410,16 @@ def main() -> None:
 
     write_slide_narrative(OUT_DIR / "slide_lambda_penalty_narrative.md")
 
+    write_qubo_ising_representation_report(
+        OUT_DIR / "QUBO_and_Ising_representation.md",
+        ids,
+        Q_combo,
+        Q_total_min,
+        lambda_risk=lambda_risk,
+        lambda_budget=lambda_budget,
+        budget_B=budget_B,
+    )
+
     plot_matrix_heatmap(
         Q_combo,
         ids,
@@ -238,6 +435,7 @@ def main() -> None:
 
     print("Phase 3 complete:", OUT_DIR.resolve())
     print("Primary Q (μ on diag, Σ off-diag):", OUT_DIR / "Q_returns_diag_cov_off.csv")
+    print("QUBO + Ising deliverable:", OUT_DIR / "QUBO_and_Ising_representation.md")
     print("Slide copy:", OUT_DIR / "slide_lambda_penalty_narrative.md")
 
 
