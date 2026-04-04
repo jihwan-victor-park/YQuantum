@@ -1,0 +1,56 @@
+{
+  "shots": 500,
+  "noise_model": {
+    "type": "phenomenological_outcome_channel",
+    "p_flip_per_qubit": 0.1,
+    "p_uniform_mix_shot": 0.04,
+    "note": "Bloqade Python analog backend is closed-system; noisy run resamples ideal empirical distribution then applies i.i.d. bit flips + uniform shot mix."
+  },
+  "entropy_ideal": 3.4504983881352556,
+  "entropy_noisy": 4.596344135144577,
+  "top5_ideal": [
+    [
+      "00101110",
+      46
+    ],
+    [
+      "11010001",
+      44
+    ],
+    [
+      "10110110",
+      34
+    ],
+    [
+      "01011101",
+      32
+    ],
+    [
+      "10110011",
+      32
+    ]
+  ],
+  "top5_noisy": [
+    [
+      "11010001",
+      25
+    ],
+    [
+      "01011101",
+      20
+    ],
+    [
+      "10110110",
+      16
+    ],
+    [
+      "10110011",
+      16
+    ],
+    [
+      "00101110",
+      15
+    ]
+  ],
+  "braket_local_top5": null
+}

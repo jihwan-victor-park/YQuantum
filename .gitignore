@@ -1,0 +1,19 @@
+# Local Python environments
+.venv/
+.venv312/
+
+# Matplotlib cache (local)
+.mplconfig/
+
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Keep phase*_output/ tracked (hackathon deliverables: CSV, PNG, JSON).

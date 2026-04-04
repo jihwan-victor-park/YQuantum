@@ -1,0 +1,6 @@
+# Phase 4: Bloqade analog local emulation (Python 3.10–3.12; not 3.14+ on current PyPI).
+bloqade-analog>=0.16.7
+numpy>=1.24
+pandas>=2.0
+scipy>=1.10
+matplotlib>=3.7

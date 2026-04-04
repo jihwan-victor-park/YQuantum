@@ -1,0 +1,291 @@
+{
+  "n_assets": 50,
+  "n_scenarios": 1200,
+  "clustering_method_primary": "hierarchical_average_correlation_distance",
+  "clustering_method_alternate": "kmeans_on_correlation_rows",
+  "sharpe_definition": "mean(scenario_return) / std(scenario_return), std ddof=1, vol floor 1e-8",
+  "selected_assets_hierarchical": [
+    "A027",
+    "A018",
+    "A008",
+    "A022",
+    "A038",
+    "A004",
+    "A048",
+    "A034"
+  ],
+  "winners_hierarchical": [
+    {
+      "cluster": 1,
+      "selected_asset": "A027",
+      "sharpe": 0.015164582462754043,
+      "cluster_size": 12,
+      "members": [
+        "A002",
+        "A003",
+        "A010",
+        "A011",
+        "A015",
+        "A026",
+        "A027",
+        "A028",
+        "A029",
+        "A036",
+        "A043",
+        "A046"
+      ],
+      "sector": "IG Credit",
+      "rating": "A",
+      "exp_return_dataset": 0.036877978,
+      "volatility_dataset": 0.06186917
+    },
+    {
+      "cluster": 2,
+      "selected_asset": "A018",
+      "sharpe": 0.053623407433425016,
+      "cluster_size": 5,
+      "members": [
+        "A014",
+        "A017",
+        "A018",
+        "A031",
+        "A042"
+      ],
+      "sector": "Gov Bonds",
+      "rating": "A",
+      "exp_return_dataset": 0.020919744,
+      "volatility_dataset": 0.044700628
+    },
+    {
+      "cluster": 3,
+      "selected_asset": "A008",
+      "sharpe": 0.07480791157348059,
+      "cluster_size": 7,
+      "members": [
+        "A001",
+        "A005",
+        "A008",
+        "A012",
+        "A016",
+        "A023",
+        "A025"
+      ],
+      "sector": "Equities Intl",
+      "rating": "",
+      "exp_return_dataset": 0.084636622,
+      "volatility_dataset": 0.198996391
+    },
+    {
+      "cluster": 4,
+      "selected_asset": "A022",
+      "sharpe": 0.06415525994341444,
+      "cluster_size": 2,
+      "members": [
+        "A022",
+        "A045"
+      ],
+      "sector": "Real Estate",
+      "rating": "",
+      "exp_return_dataset": 0.060711072,
+      "volatility_dataset": 0.136212419
+    },
+    {
+      "cluster": 5,
+      "selected_asset": "A038",
+      "sharpe": 0.022421564671416438,
+      "cluster_size": 1,
+      "members": [
+        "A038"
+      ],
+      "sector": "Infrastructure",
+      "rating": "",
+      "exp_return_dataset": 0.062864819,
+      "volatility_dataset": 0.1148405
+    },
+    {
+      "cluster": 6,
+      "selected_asset": "A004",
+      "sharpe": 0.05954371040377427,
+      "cluster_size": 10,
+      "members": [
+        "A004",
+        "A019",
+        "A020",
+        "A021",
+        "A024",
+        "A030",
+        "A040",
+        "A041",
+        "A049",
+        "A050"
+      ],
+      "sector": "Equities US",
+      "rating": "",
+      "exp_return_dataset": 0.082326369,
+      "volatility_dataset": 0.172940213
+    },
+    {
+      "cluster": 7,
+      "selected_asset": "A048",
+      "sharpe": 0.10543627883619514,
+      "cluster_size": 3,
+      "members": [
+        "A007",
+        "A039",
+        "A048"
+      ],
+      "sector": "Cash",
+      "rating": "",
+      "exp_return_dataset": 0.013631697,
+      "volatility_dataset": 0.011892044
+    },
+    {
+      "cluster": 8,
+      "selected_asset": "A034",
+      "sharpe": 0.09618281336053534,
+      "cluster_size": 10,
+      "members": [
+        "A006",
+        "A009",
+        "A013",
+        "A032",
+        "A033",
+        "A034",
+        "A035",
+        "A037",
+        "A044",
+        "A047"
+      ],
+      "sector": "HY Credit",
+      "rating": "BB",
+      "exp_return_dataset": 0.069070331,
+      "volatility_dataset": 0.120805262
+    }
+  ],
+  "selected_assets_kmeans": [
+    "A022",
+    "A034",
+    "A027",
+    "A004",
+    "A008",
+    "A018",
+    "A046",
+    "A048"
+  ],
+  "winners_kmeans": [
+    {
+      "cluster": 1,
+      "selected_asset": "A022",
+      "sharpe": 0.06415525994341444,
+      "cluster_size": 3,
+      "members": [
+        "A022",
+        "A038",
+        "A045"
+      ]
+    },
+    {
+      "cluster": 2,
+      "selected_asset": "A034",
+      "sharpe": 0.09618281336053534,
+      "cluster_size": 10,
+      "members": [
+        "A006",
+        "A009",
+        "A013",
+        "A032",
+        "A033",
+        "A034",
+        "A035",
+        "A037",
+        "A044",
+        "A047"
+      ]
+    },
+    {
+      "cluster": 3,
+      "selected_asset": "A027",
+      "sharpe": 0.015164582462754043,
+      "cluster_size": 7,
+      "members": [
+        "A002",
+        "A003",
+        "A026",
+        "A027",
+        "A028",
+        "A029",
+        "A043"
+      ]
+    },
+    {
+      "cluster": 4,
+      "selected_asset": "A004",
+      "sharpe": 0.05954371040377427,
+      "cluster_size": 10,
+      "members": [
+        "A004",
+        "A019",
+        "A020",
+        "A021",
+        "A024",
+        "A030",
+        "A040",
+        "A041",
+        "A049",
+        "A050"
+      ]
+    },
+    {
+      "cluster": 5,
+      "selected_asset": "A008",
+      "sharpe": 0.07480791157348059,
+      "cluster_size": 7,
+      "members": [
+        "A001",
+        "A005",
+        "A008",
+        "A012",
+        "A016",
+        "A023",
+        "A025"
+      ]
+    },
+    {
+      "cluster": 6,
+      "selected_asset": "A018",
+      "sharpe": 0.053623407433425016,
+      "cluster_size": 5,
+      "members": [
+        "A014",
+        "A017",
+        "A018",
+        "A031",
+        "A042"
+      ]
+    },
+    {
+      "cluster": 7,
+      "selected_asset": "A046",
+      "sharpe": -0.007207515024603469,
+      "cluster_size": 5,
+      "members": [
+        "A010",
+        "A011",
+        "A015",
+        "A036",
+        "A046"
+      ]
+    },
+    {
+      "cluster": 8,
+      "selected_asset": "A048",
+      "sharpe": 0.10543627883619514,
+      "cluster_size": 3,
+      "members": [
+        "A007",
+        "A039",
+        "A048"
+      ]
+    }
+  ]
+}

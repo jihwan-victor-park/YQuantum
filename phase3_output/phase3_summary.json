@@ -1,0 +1,130 @@
+{
+  "assets": [
+    "A027",
+    "A018",
+    "A008",
+    "A022",
+    "A038",
+    "A004",
+    "A048",
+    "A034"
+  ],
+  "step_3_1_Q_structure": {
+    "description": "Diagonal = expected return \u03bc_i; off-diagonal = covariance \u03a3_ij (i\u2260j).",
+    "file": "Q_returns_diag_cov_off.csv",
+    "matrix": [
+      [
+        0.036877978,
+        0.000179625,
+        0.001092325,
+        0.00096671,
+        0.001065266,
+        0.001384665,
+        5.33496e-05,
+        0.000650326
+      ],
+      [
+        0.000179625,
+        0.020919744,
+        0.000271323,
+        0.000407488,
+        0.00048829,
+        0.000729145,
+        9.25151e-05,
+        0.000570456
+      ],
+      [
+        0.001092325,
+        0.000271323,
+        0.084636622,
+        0.004815167,
+        0.001734394,
+        0.00387096,
+        0.000260282,
+        0.003922389
+      ],
+      [
+        0.00096671,
+        0.000407488,
+        0.004815167,
+        0.060711072,
+        0.002981705,
+        0.0020029,
+        0.000240869,
+        0.001809799
+      ],
+      [
+        0.001065266,
+        0.00048829,
+        0.001734394,
+        0.002981705,
+        0.062864819,
+        0.000996235,
+        0.000206099,
+        0.001626475
+      ],
+      [
+        0.001384665,
+        0.000729145,
+        0.00387096,
+        0.0020029,
+        0.000996235,
+        0.082326369,
+        0.000145163,
+        0.003209526
+      ],
+      [
+        5.33496e-05,
+        9.25151e-05,
+        0.000260282,
+        0.000240869,
+        0.000206099,
+        0.000145163,
+        0.013631697,
+        0.0001941
+      ],
+      [
+        0.000650326,
+        0.000570456,
+        0.003922389,
+        0.001809799,
+        0.001626475,
+        0.003209526,
+        0.0001941,
+        0.069070331
+      ]
+    ]
+  },
+  "qubo_energy_note": "For binary x, E(x)=x^T Q x = sum_i Q_ii x_i + 2 sum_{i<j} Q_ij x_i x_j. Signs must match whether the solver minimizes energy and whether you maximize return.",
+  "lambda_penalty_narrative": {
+    "budget_penalty_readme": "\u03bb(\u2211_i w_i \u2212 B)\u00b2 as in challenge README \u2014 \u03bb must be tuned so solutions are feasible yet non-trivial.",
+    "too_high": "Penalties dominate \u2192 poor objective / trivial feasible states.",
+    "too_low": "Constraints ignored \u2192 attractive but invalid portfolios.",
+    "physics_hook": "Hardware Hamiltonian + graph structure vs hand-tuned \u03bb to encode constraints."
+  },
+  "optional_minimization_encoding": {
+    "lambda_risk": 12.0,
+    "lambda_budget": 5.0,
+    "budget_B": 4.0,
+    "files": {
+      "return_plus_risk_min_Q": "Q_min_return_plus_risk.csv",
+      "budget_penalty_increment": "Q_add_budget_penalty_only.csv",
+      "combined": "Q_min_with_budget_penalty.csv"
+    },
+    "formula": "Q_ii = -\u03bc_i + \u03bb_risk \u03a3_ii + \u03bb_budget (1 - 2B); Q_ij = \u03bb_risk \u03a3_ij + \u03bb_budget for i\u2260j (symmetric)."
+  },
+  "demo_random_binary_energy": {
+    "x": {
+      "A027": 1,
+      "A018": 0,
+      "A008": 0,
+      "A022": 0,
+      "A038": 1,
+      "A004": 1,
+      "A048": 1,
+      "A034": 1
+    },
+    "E_Q_combo": 0.2838336032,
+    "E_Q_total_min": -74.2961048876
+  }
+}

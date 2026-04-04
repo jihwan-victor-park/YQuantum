@@ -68,6 +68,16 @@ The goal is not only to optimize a portfolio, but to understand the interplay be
 
 Additionally, you are asked to make the solution (demo) applicable and understandable to the stakeholders, so try to get their advice on the matter.
 
+## Topology flex: dense portfolio graphs vs chip geometry (IBM vs QuEra)
+
+Financial portfolios are **densely connected graphs**: mean–variance and QUBO-style objectives couple many asset pairs through covariances and correlations, so idealized problem graphs are closer to **all-to-all** than to a sparse lattice.
+
+**Superconducting processors (e.g., IBM)** are largely stuck with **fixed, low-locality couplers** (nearest-neighbor or grid-like). Embedding a dense portfolio graph on such a device typically requires **long SWAP chains** to bring distant logical qubits together. Each extra SWAP is more depth, more error, and more calibration sensitivity—often **fatal** for optimization variational loops where the signal is already fragile.
+
+**Neutral atoms (QuEra / Aquila-class platforms)** take a different path: **atoms can be arranged in the plane** so that geometric proximity (and Rydberg interactions) **matches problem structure** more natively—correlated “risk clusters” can be placed within blockade range, while weakly correlated assets sit farther apart. The analog pulse then explores a landscape shaped by **physics and layout**, not only by abstract gates on a rigid grid.
+
+This repository’s Phase 4–5 scripts use **Bloqade analog** layouts and compare **ideal vs noisy** bitstring statistics to show how **readout and decoherence-like effects flatten** peak portfolio configurations—complementing the connectivity story above.
+
 ## Judging criteria
 
 <img width="1085" height="507" alt="image" src="https://github.com/user-attachments/assets/c6c25546-a3b3-457b-bd04-59546b7927ce" />

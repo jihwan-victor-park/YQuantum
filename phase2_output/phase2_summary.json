@@ -1,0 +1,46 @@
+{
+  "assets": [
+    "A027",
+    "A018",
+    "A008",
+    "A022",
+    "A038",
+    "A004",
+    "A048",
+    "A034"
+  ],
+  "sectors": [
+    "IG Credit",
+    "Gov Bonds",
+    "Equities Intl",
+    "Real Estate",
+    "Infrastructure",
+    "Equities US",
+    "Cash",
+    "HY Credit"
+  ],
+  "risk_aversion_lambda": 12.0,
+  "bounds_mode": "long_only_0_1",
+  "budget_sum_w": 1.0,
+  "dataset_w_max_sum": 0.99,
+  "notes": "Default CLASSICAL_BOUNDS=textbook uses 0<=w<=1 and sum(w)=1 (standard long-only Markowitz). CLASSICAL_BOUNDS=dataset uses hackathon w_min/w_max; if sum(w_max)<1 on this subset, budget defaults to that sum and the feasible set can collapse to a single corner (all at caps).",
+  "objective": "maximize mu.T @ w - (lambda/2) * w.T @ Sigma @ w",
+  "constraints": "sum(w)=1, bounds per CLASSICAL_BOUNDS",
+  "optimizer": "scipy.optimize.minimize SLSQP",
+  "success": true,
+  "message": "Optimization terminated successfully",
+  "weights": {
+    "A027": 0.2728384428483525,
+    "A018": 0.004544191078215998,
+    "A008": 0.08352397562569884,
+    "A022": 0.09893078285744279,
+    "A038": 0.20722992423942488,
+    "A004": 0.12629267836034777,
+    "A048": 7.627181144748621e-18,
+    "A034": 0.20664000499051732
+  },
+  "portfolio_exp_return": 0.06092955730292737,
+  "portfolio_variance": 0.0037663681280577493,
+  "portfolio_volatility": 0.06137074325814988,
+  "portfolio_sharpe_like": 0.9928111355378783
+}
