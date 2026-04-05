@@ -1,118 +1,293 @@
-# YQuantum Hackathon: 
+# Quantum-Enhanced Insurance Portfolio Optimization
 
-## Optimization of Premium Investment Portfolios
+**YQuantum 2025 Hackathon** — The Hartford x Capgemini Quantum Lab x QuEra
 
-<img width="641" height="187" alt="image" src="https://github.com/user-attachments/assets/3a52ee10-0916-4432-b262-28af638976b7" />
+An end-to-end pipeline that uses neutral-atom (Rydberg) analog quantum computing
+to optimize insurance investment portfolios. Instead of tuning penalty parameters
+in a QUBO formulation, we encode portfolio constraints directly into the physics
+of atom placement and laser pulse design on QuEra's Bloqade platform.
 
-Use case by The Hartford and Capgemini’s Quantum Lab supported by QuEra 
+---
 
-## Description of broad problem
+## Pipeline Overview
 
-Insurance companies collect large volumes of premiums that must be invested to ensure long term financial stability and the capacity to pay future claims. Unlike traditional asset managers, insurers operate under stringent solvency and liquidity requirements, meaning they must pursue stable returns while simultaneously protecting capital and managing risk exposures.
+```
+INPUT                           CLASSICAL FOUNDATION                    QUANTUM LAYER                         VALIDATION
+─────                           ────────────────────                    ─────────────                         ──────────
 
-An insurer’s investment portfolio may include government bonds, investment grade and high yield credit, equities, infrastructure, real estate, and cash instruments. Each asset class demonstrates unique patterns of expected return, volatility, liquidity, and regulatory capital charges. Furthermore, these assets often exhibit varying degrees of correlation due to global interest rate changes, credit market conditions, macroeconomic events, or broad market fluctuations. During periods of financial stress, several asset classes may fall in value at the same time, which can jeopardize diversification benefits and impact solvency.
+ 50 assets                       Markowitz mean-variance                Atom layout from correlation          Ideal vs noisy
+ 1200 scenarios          ──>     optimization (SLSQP)           ──>    + adiabatic Rydberg pulse      ──>    bitstring comparison
+ 6 sectors                       on 8 cluster representatives          on Bloqade (8 qubits)                 + 11-method benchmark
 
-Constructing a portfolio that balances expected return with risk, while adhering to these constraints, is therefore a highly non trivial task. A typical investment portfolio must:
+        Phase 1                        Phase 2                              Phase 3-4                            Phase 5
+   Clustering & Selection         Classical Baseline                  QUBO + Analog Quantum                Noise & Benchmark
+```
 
-- generate attractive long term returns,
-- remain resilient to correlated market shocks,
-- meet capital and solvency requirements,
-- maintain sufficient liquidity,
-- and avoid excessive concentration in any single asset class or market exposure.
+**Phase 1 — Smart Data Preparation**
+```
+50 assets ──> hierarchical clustering on correlation distance ──> 8 clusters
+         ──> select highest Sharpe ratio asset per cluster ──> 8 representative assets
+```
 
-This challenge invites participants to explore methods for identifying such optimized portfolios. Modern techniques such as Markowitz mean variance optimization serve as a classical foundation, but real world constraints and complex asset interdependencies create an opportunity to explore how quantum computing approaches might enhance portfolio construction.
+**Phase 2 — Classical Markowitz Baseline**
+```
+8 assets ──> maximize  mu^T w - (lambda/2) w^T Sigma w
+         ──> subject to sum(w)=1, 0<=w<=1
+         ──> result: 6.09% return, 6.14% volatility, Sharpe 0.99
+```
 
-## Where quantum can be used
+**Phase 3 — QUBO / Ising Formulation**
+```
+Markowitz objective ──> QUBO matrix Q (8x8)
+                    ──> Ising parameters (h, J, C0) via x = (1+s)/2
+                    ──> documents the lambda penalty problem
+```
 
-### Mathematical formulation of the problem
+**Phase 4 — Analog Rydberg on Bloqade**
+```
+correlation matrix ──> atom positions in 2D (high |rho| = close = blockade)
+expected returns   ──> per-atom local detuning (high mu = deeper bias)
+                   ──> adiabatic pulse: Omega ramp + Delta sweep
+                   ──> 1000-shot measurement ──> portfolio bitstrings
+```
 
-A common and well established approach for constructing investment portfolios is the Markowitz mean–variance optimization framework. This method focuses on identifying a portfolio that maximizes expected return while minimizing overall risk, where risk is quantified through the covariance structure of asset returns. 
+**Phase 5 — Noise Analysis**
+```
+ideal bitstrings ──> apply bit-flip (10%) + uniform mix (4%)
+                 ──> compare entropy, top-bitstring survival
+                 ──> key finding: quantum signal persists under noise
+```
 
-For insurance companies, this process is particularly important because investment decisions must balance profitability with regulatory constraints and capital preservation. The classic Markowitz objective function can be expressed as:
+**Benchmark — 11 Methods Compared**
+```
+EW50, random EW8, top-Sharpe EW8, cluster EW8, Markowitz,
+analog return-weighted, analog Sharpe-weighted,
+hybrid (quantum select + classical optimize), ensemble
+──> evaluated on 1200 scenarios including 120 stress scenarios
+```
 
-<img width="454" height="242" alt="image" src="https://github.com/user-attachments/assets/03b32190-c831-47b6-b889-e7f8f216c7be" />
+---
 
-- q>0 represents the insurer’s risk aversion. Higher values place greater emphasis on risk reduction relative to return.
-- w_i is the portfolio weight assigned to asset i. 
-- σ_ij denotes the covariance between the returns of assets iand j, capturing how their risks move together.
-- μ_i is the expected return of asset i.
+## Core Idea: Physics Replaces Penalty Tuning
 
-The goal is to find the values of w_i that minimize the total portfolio risk, taking into account the correlations σ_ij between all pairs of properties. This optimization ensures that the selected portfolio has the lowest possible risk due to uncorrelated properties.
+Classical QUBO approaches require hand-tuning a penalty parameter lambda to enforce
+constraints like budget or diversification. Too high and the optimizer ignores returns;
+too low and it produces infeasible portfolios.
 
-### Quantum approaches
+Our approach encodes constraints through the physics of Rydberg atoms:
 
-The formulation above is not ready for a quantum computer yet, because it has constraints. We can add the term λ(∑_i*w_i -B)^2 to make sure the objective function is minimal when the constraint ∑_i*w_i =B is met. λ is a penalty term that you have to tweak in order to make the solutions feasible, but also non-trivial.
-The final formulation is
+```
+CLASSICAL (QUBO)                          ANALOG (Rydberg)
+────────────────                          ────────────────
+lambda * (sum w_i - B)^2                  Rydberg blockade: atoms within ~7.5 um
+  -> hand-tuned penalty                     cannot both be in |1> (selected)
+  -> fragile, problem-specific              -> physical law, no tuning needed
 
-<img width="612" height="113" alt="image" src="https://github.com/user-attachments/assets/89dec75a-2aa0-4cb8-820f-4f35d27c94b7" />
+Covariance in Q matrix                    Atom distance from |rho_ij|
+  -> abstract math encoding                 -> correlated assets placed close
+                                            -> blockade prevents co-selection
 
-Now the formulation is called a quadratic unconstrained binary optimization or QUBO problem. Quadratic because of the term w_i w_j, unconstrained because there are no constraints, and binary because the w_i’s are binary variables. This formulation is a good fit for quantum computers, as it is reminiscent of the Ising model.
-Techniques such as the Quantum Approximate Optimization Algorithm (QAOA) [1], [2], variational eigen solvers (VQE) [3], [4], or analog approaches [5] may be used to explore large combinatorial landscapes and identify low energy configurations that correspond to promising portfolios.
+No return preference                      Per-atom local detuning proportional to mu_i
+  -> all assets treated equally              -> higher return = deeper bias toward selection
+```
 
-In this challenge, we encourage you to explore how the structure of the portfolio problem interacts with quantum hardware considerations. Investment portfolios frequently lead to densely connected problem graphs, and you may reflect on how different hardware connectivity models influence the implementation and performance of quantum optimization algorithms.
-Expectations of the challenge
+This is not a digital gate circuit. QuEra's hardware is natively analog — we use
+it in its native mode, which is a deliberate design choice that avoids the SWAP
+overhead required by gate-based approaches on fixed-topology processors.
 
-You are invited to develop an approach that at least:
+---
 
-- Formulates the investment portfolio as an optimization problem,
-- Constructs a QUBO or Ising representation,
-- Run a circuit on Bloqade with 8 Qubits
+## Key Results
 
-After you have a running circuit, it will be important to scale and add noise to resemble a real-life situation. There are different ways to realize that and we highly encourage you to challenge yourself here. 
+### Best Performer: Hybrid Quantum-Classical
 
-- Investigates the influence of qubit connectivity and noise,
-- Explores quantum-inspired or quantum-based optimization strategies,
-- Demonstrates how different simulations or hardware assumptions affect outcomes 
+The hybrid approach — quantum Sharpe-weighted bitstring selects assets, then classical
+Markowitz re-optimizes weights on that subset — achieves the best risk-adjusted performance:
 
-The goal is not only to optimize a portfolio, but to understand the interplay between algorithmic choices and hardware features, problem structure and how qubit connectivity impacts scaling. You are free to pursue additional modeling choices or innovative approaches that they believe may strengthen your solution.
+| Method | Sharpe (all) | CVaR 5% | Sharpe (stress) |
+|--------|-------------|---------|-----------------|
+| EW50 baseline | 0.071 | -0.0067 | -4.48 |
+| Classical Markowitz | 0.107 | -0.0078 | -1.83 |
+| Analog return-weighted | 0.114 | -0.0093 | -1.98 |
+| **Hybrid Sharpe + Markowitz** | **0.131** | **-0.0018** | **-1.06** |
+| Ensemble Sharpe-weighted | 0.117 | -0.0069 | -2.04 |
 
-Additionally, you are asked to make the solution (demo) applicable and understandable to the stakeholders, so try to get their advice on the matter.
+Under stress scenarios (worst 10% of market conditions), the hybrid method reduces
+tail risk by 73% (CVaR) compared to equal-weight baseline.
 
-## Topology flex: dense portfolio graphs vs chip geometry (IBM vs QuEra)
+### Three Detuning Strategies
 
-Financial portfolios are **densely connected graphs**: mean–variance and QUBO-style objectives couple many asset pairs through covariances and correlations, so idealized problem graphs are closer to **all-to-all** than to a sparse lattice.
+| Strategy | Top bitstring | Freq | Portfolio | Rationale |
+|----------|--------------|------|-----------|-----------|
+| Uniform | 00101110 | 10.8% | 4 assets | No return preference |
+| Return-weighted | 01101101 | 18.5% | 4 assets, E[R]=6.40% | Bias toward high-return |
+| Sharpe-weighted | 00101110 | 16.2% | 4 assets, E[R]=6.09% | Bias toward risk-adjusted |
 
-**Superconducting processors (e.g., IBM)** are largely stuck with **fixed, low-locality couplers** (nearest-neighbor or grid-like). Embedding a dense portfolio graph on such a device typically requires **long SWAP chains** to bring distant logical qubits together. Each extra SWAP is more depth, more error, and more calibration sensitivity—often **fatal** for optimization variational loops where the signal is already fragile.
+### Noise Resilience
 
-**Neutral atoms (QuEra / Aquila-class platforms)** take a different path: **atoms can be arranged in the plane** so that geometric proximity (and Rydberg interactions) **matches problem structure** more natively—correlated “risk clusters” can be placed within blockade range, while weakly correlated assets sit farther apart. The analog pulse then explores a landscape shaped by **physics and layout**, not only by abstract gates on a rigid grid.
+| Metric | Ideal | Noisy (10% flip + 4% mix) |
+|--------|-------|---------------------------|
+| Shannon entropy | 3.45 nats | 4.60 nats (+33%) |
+| Top bitstring probability | 9.2% | 5.0% |
 
-This repository’s Phase 4–5 scripts use **Bloqade analog** layouts and compare **ideal vs noisy** bitstring statistics to show how **readout and decoherence-like effects flatten** peak portfolio configurations—complementing the connectivity story above.
+Distribution flattens under noise, but top bitstrings remain in the upper ranks —
+the quantum signal survives, validating the hybrid approach where quantum selects
+candidates and classical optimizes weights.
 
-## Judging criteria
+---
 
-<img width="1085" height="507" alt="image" src="https://github.com/user-attachments/assets/c6c25546-a3b3-457b-bd04-59546b7927ce" />
+## Hardware Connectivity Argument
 
-## Resources
+Insurance portfolios produce **densely connected** problem graphs — every asset pair
+has a nonzero covariance. This creates a fundamental mismatch with fixed-topology
+quantum processors:
 
-### Starting points
+```
+Superconducting (IBM-style)              Neutral Atom (QuEra-style)
+───────────────────────────              ─────────────────────────
+Fixed grid connectivity                  Free 2D atom placement
+Dense graph -> SWAP chains               Dense graph -> place atoms at target distances
+Each SWAP = more depth + error           No SWAPs needed
+Portfolio structure lost in routing      Portfolio structure preserved in geometry
+```
 
-Here are some webpages, video’s, articles that might get you started
+Our Phase 4 directly demonstrates this: correlation structure maps to atom distances,
+and the Rydberg blockade radius naturally enforces diversification constraints without
+additional circuit depth.
 
-- Optimizing QAOA in a noisy setting:
-https://bloqade.quera.com/v0.32.0/digital/tutorials/auto_parallelism/#example-4-qaoa-graph-state-preparation 
+---
 
-- Scaling up simulations using Pauli Propagations:
-https://github.com/MSRudolph/PauliPropagation.jl, https://github.com/Qiskit/pauli-prop 
+## Repository Structure
 
--  Portfolio Optimization - Qiskit Finance 0.4.1:
-https://qiskit-community.github.io/qiskit-finance/tutorials/01_portfolio_optimization.html
+```
+.
+├── phase1_smart_data_prep.py          # Clustering 50 -> 8 assets
+├── phase2_classical_benchmark.py      # Markowitz baseline
+├── phase3_qubo_setup.py               # QUBO/Ising formulation
+├── phase4_analog_rydberg.py           # Bloqade analog simulation
+├── phase5_noise_topology.py           # Noise analysis
+├── scenario_portfolio_benchmark.py    # 11-method comparison
+│
+├── phase1_output/
+│   ├── correlation_heatmap_by_cluster.png
+│   ├── dendrogram.png
+│   ├── eight_winners_sharpe_barh.png
+│   └── eight_qubit_assets.csv
+│
+├── phase2_output/
+│   ├── classical_weights_pie.png
+│   └── assets_bubble_risk_return_with_portfolio.png
+│
+├── phase3_output/
+│   ├── Q_returns_diag_cov_off_heatmap.png
+│   └── QUBO_and_Ising_representation.md
+│
+├── phase4_output/
+│   ├── atom_layout_um.png
+│   ├── pulse_waveforms_enhanced.png
+│   ├── uniform_vs_return_weighted_bitstrings.png
+│   ├── scale_sweep_risk_return.png
+│   └── pair_distance_vs_correlation_scatter.png
+│
+├── phase5_output/
+│   ├── ideal_vs_noisy_top_bitstrings.png
+│   └── entropy_ideal_vs_noisy.png
+│
+├── scenario_benchmark_output/
+│   ├── metrics_mean_sharpe_cvar5.png
+│   ├── stress_scenario_mean_return_by_method.png
+│   └── BENCHMARK_REPORT.md
+│
+├── investment_dataset_scenarios.csv   # 1200 x 50 return scenarios
+├── investment_dataset_assets.csv      # Asset metadata
+├── investment_dataset_covariance.csv  # 50 x 50 covariance matrix
+├── investment_dataset_correlation.csv # 50 x 50 correlation matrix
+└── investment_dataset_full.xlsx       # Combined dataset
+```
 
-- Solving combinatorial optimization problems using QAOA:
-https://github.com/Qiskit/textbook/blob/main/notebooks/ch-applications/qaoa.ipynb
+---
 
-### References
+## How to Run
 
-[1]	E. Farhi, J. Goldstone, and S. Gutmann, “A quantum approximate optimization algorithm,” arXiv preprint arXiv:1411.4028, 2014.
+**Requirements:** Python 3.10-3.12 (Bloqade does not support 3.13+)
 
-[2]	N. Sachdeva et al., “Quantum optimization using a 127-qubit gate-model IBM quantum computer can outperform quantum annealers for nontrivial binary optimization problems,” Jul. 22, 2024, arXiv: arXiv:2406.01743. Accessed: Sep. 13, 2024. [Online]. Available: http://arxiv.org/abs/2406.01743
+```bash
+# Phase 1-3, 5, benchmark (standard Python)
+pip install numpy pandas scipy matplotlib seaborn openpyxl
+python phase1_smart_data_prep.py
+python phase2_classical_benchmark.py
+python phase3_qubo_setup.py
 
-[3]	M. Cerezo et al., “Variational quantum algorithms,” Nature Reviews Physics, vol. 3, no. 9, pp. 625–644, 2021.
+# Phase 4-5 (requires bloqade-analog)
+python3.12 -m venv .venv312
+source .venv312/bin/activate
+pip install bloqade-analog numpy pandas scipy matplotlib
+python phase4_analog_rydberg.py
+python phase5_noise_topology.py
 
-[4]	D. Wang, O. Higgott, and S. Brierley, “Accelerated Variational Quantum Eigensolver,” Physical review letters, vol. 122, no. 14, p. 140504, 2019.
+# Benchmark (after Phase 4 completes)
+python scenario_portfolio_benchmark.py
+```
 
-[6]	S. Stastny, H. P. Büchler, and N. Lang, “Functional completeness of planar Rydberg blockade structures,” Physical Review B, vol. 108, no. 8, p. 085138, 2023.
+---
 
-[7]	M. W. Johnson et al., “Quantum annealing with manufactured spins,” Nature, vol. 473, no. 7346, pp. 194–198, 2011.
+## Technical Details
 
-[8]	C. C. McGeoch, K. Chern, P. Farré, and A. K. King, “A comment on comparing optimization on D-Wave and IBM quantum processors,” Jun. 27, 2024, arXiv: arXiv:2406.19351. Accessed: Oct. 17, 2024. [Online]. Available: http://arxiv.org/abs/2406.19351
+### Rydberg Hamiltonian
 
+The system evolves under the standard neutral-atom Hamiltonian:
+
+```
+H(t) = (Omega(t)/2) sum_i sigma_x^(i) - Delta(t) sum_i n_i + sum_{i<j} (C6/R_ij^6) n_i n_j
+```
+
+We do not modify the Hamiltonian. Our contribution is in the **parameter mapping**:
+
+| Parameter | Standard usage | Our mapping |
+|-----------|---------------|-------------|
+| R_ij (atom distance) | Arbitrary placement | Derived from correlation: high \|rho\| -> close -> blockade |
+| Delta_i (local detuning) | Uniform for all atoms | Proportional to mu_i or Sharpe_i per asset |
+| Omega(t), Delta(t) (pulse shape) | Application-dependent | Adiabatic sweep: 0.18 + 2.2 + 0.18 us |
+
+### Adiabatic Protocol
+
+```
+t = 0.00 us : Omega=0,   Delta=-14  ->  ground state, all assets unselected
+t = 0.18 us : Omega=2.8, Delta=-14  ->  laser on, quantum exploration begins
+t = 2.38 us : Omega=2.8, Delta=+14  ->  selection becomes favorable
+t = 2.56 us : Omega=0,   Delta=+14  ->  laser off, measure final portfolio
+```
+
+### Geometry Optimization
+
+Atom positions are optimized to minimize stress between target and actual pairwise distances:
+
+```
+minimize sum_{i<j} (||r_i - r_j|| - d_target(|rho_ij|))^2
+
+where d_target:
+  |rho| >= 0.30  ->  6.0 um  (within blockade, co-selection suppressed)
+  |rho| <= 0.12  ->  16.0 um (beyond blockade, independent selection)
+  between        ->  linear interpolation
+```
+
+### Noise Model
+
+Phenomenological post-measurement noise applied to ideal Bloqade results:
+- **Bit-flip:** 10% per-qubit probability (models readout error / spontaneous emission)
+- **Uniform mix:** 4% per-shot probability of complete decoherence
+
+---
+
+## Challenge Requirements Checklist
+
+| Requirement | Status | Implementation |
+|-------------|--------|----------------|
+| Formulate as optimization problem | Done | Markowitz mean-variance (Phase 2) |
+| Construct QUBO or Ising representation | Done | 8x8 Q matrix + Ising (h, J, C0) with verification (Phase 3) |
+| Run on Bloqade with 8 qubits | Done | Analog mode, 3 detuning strategies, 1000 shots (Phase 4) |
+| Scale and add noise | Done | Geometry scale sweep (0.8x-1.5x) + noise model (Phase 4-5) |
+| Investigate connectivity and noise | Done | Neutral atom vs superconducting analysis + entropy comparison |
+| Quantum-based optimization strategies | Done | Return-weighted, Sharpe-weighted, ensemble, hybrid approaches |
+| Hardware assumptions affect outcomes | Done | Scale sweep shows geometry directly controls portfolio selection |
+| Demo applicable to stakeholders | Done | 11-method benchmark with stress scenarios, visual outputs |
